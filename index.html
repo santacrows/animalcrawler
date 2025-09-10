@@ -204,22 +204,22 @@
             { id: 0,  name: 'Tiger',     sprite: '🐅', hp: 109, attack: 20, defense: 9,  speed: 20 }, // Original Def: 6
             { id: 15, name: 'Leopard',   sprite: '🐆', hp: 135, attack: 16, defense: 11, speed: 20 }, // Original Def: 8
             { id: 3,  name: 'Horse',     sprite: '🐎', hp: 134, attack: 16, defense: 10, speed: 21 }, // Original Def: 7
-            { id: 13, name: 'Butterfly', sprite: '🦋', hp: 110, attack: 11, defense: 16, speed: 23 }, // Original Def: 12
+            { id: 13, name: 'Butterfly', sprite: '🦋', hp: 120, attack: 12, defense: 12, speed: 24 }, // Original Def: 12
             // Dodge / Evasive
             { id: 9,  name: 'Flamingo',  sprite: '🦩', hp: 143, attack: 15, defense: 14, speed: 19 }, // Original Def: 10
             { id: 4,  name: 'Orangutan', sprite: '🦧', hp: 151, attack: 17, defense: 12, speed: 18 }, // Original Def: 9
             { id: 6,  name: 'Crocodile', sprite: '🐊', hp: 160, attack: 18, defense: 11, speed: 16 }, // Original Def: 8
             // Balanced / Bruisers
             { id: 2,  name: 'Camel',     sprite: '🐫', hp: 169, attack: 14, defense: 15, speed: 17 }, // Original Def: 11
-            { id: 5,  name: 'Badger',    sprite: '🦡', hp: 169, attack: 15, defense: 16, speed: 14 }, // Original Def: 12
-            { id: 14, name: 'Bison',     sprite: '🦬', hp: 180, attack: 16, defense: 14, speed: 14 }, // Original Def: 10
+            { id: 5,  name: 'Badger',    sprite: '🦡', hp: 179, attack: 15, defense: 16, speed: 15 }, // Original Def: 12
+            { id: 14, name: 'Bison',     sprite: '🦬', hp: 190, attack: 16, defense: 14, speed: 15 }, // Original Def: 10
             // Tanks
-            { id: 16, name: 'Beaver',    sprite: '🦫', hp: 175, attack: 11, defense: 18, speed: 12 }, // Original Def: 14
-            { id: 7,  name: 'Hippo',     sprite: '🦛', hp: 194, attack: 12, defense: 17, speed: 13 }, // Original Def: 13
-            { id: 1,  name: 'Elephant',  sprite: '🐘', hp: 203, attack: 11, defense: 18, speed: 12 }, // Original Def: 14
-            { id: 8,  name: 'Buffalo',   sprite: '🐃', hp: 220, attack: 10, defense: 20, speed: 11 }, // Original Def: 15
-            { id: 11, name: 'Turtle',    sprite: '🐢', hp: 186, attack: 9,  defense: 21, speed: 10 }, // Original Def: 16
-            { id: 17, name: 'Sloth',     sprite: '🦥', hp: 230, attack: 9,  defense: 21, speed: 8  }, // Original Def: 16
+            { id: 16, name: 'Beaver',    sprite: '🦫', hp: 185, attack: 11, defense: 19, speed: 13 }, // Original Def: 14
+            { id: 7,  name: 'Hippo',     sprite: '🦛', hp: 204, attack: 12, defense: 18, speed: 14 }, // Original Def: 13
+            { id: 1,  name: 'Elephant',  sprite: '🐘', hp: 213, attack: 11, defense: 20, speed: 13 }, // Original Def: 14
+            { id: 8,  name: 'Buffalo',   sprite: '🐃', hp: 230, attack: 10, defense: 22, speed: 12 }, // Original Def: 15
+            { id: 11, name: 'Turtle',    sprite: '🐢', hp: 196, attack: 9,  defense: 25, speed: 11 }, // Original Def: 16
+            { id: 17, name: 'Sloth',     sprite: '🦥', hp: 250, attack: 11,  defense: 24, speed: 10  }, // Original Def: 16
         ];
         let CHARACTERS = JSON.parse(JSON.stringify(ORIGINAL_CHARACTERS));
         
@@ -532,7 +532,7 @@
                 ? Math.floor(Math.random() * (Math.floor(attackerStats.attack) - Math.floor(attackerStats.attack / 2) + 1)) + Math.floor(attackerStats.attack / 2)
                 : attackerStats.attack;
 
-            const damageReduction = 100 / (100 + (defenderStats.defense * 7));
+            const damageReduction = 100 / (100 + (defenderStats.defense * 10));
             const damage = Math.max(1, Math.round(preDefenseDamage * damageReduction));
             defender.hp -= damage;
             
@@ -805,5 +805,6 @@
     </script>
 </body>
 </html>
+
 
 

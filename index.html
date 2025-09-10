@@ -181,11 +181,14 @@
 			{ name: 'the Sky', walls: ['☁️','🌈','⛅','🌦️','🌧️'] }, 
             { name: 'a Desert', walls: ['🏜️', '🪨', '🌵'] },
             { name: 'the Mountains', walls: ['⛰️', '🗻', '🗿'] },
-            { name: 'a Swamp', walls: ['🍃', '🪵', '🌱'] },
+            { name: 'a Swamp', walls: ['🍃', '🪵', '🌱', '🪷'] },
             { name: 'a Meadow', walls: ['🌷','🌼','🌻','🌹'] },
             { name: 'the City', walls: ['🏢','🏘️','🏠','🏛️','🏬','🏭','🏫','🚕','🚧'] },
             { name: 'the Ocean', walls: ['🌊','🐚','🫧','🪸']},
-            { name: 'Space', walls: ['⭐','🌟','✨','🌙','🪐']}
+            { name: 'Space', walls: ['⭐','🌟','✨','🌙','🪐']},
+			{ name: 'a Glacier', walls: ['🧊','❄️','🌨','☃️']},
+			{ name: 'a Tea Party', walls: ['💗','🎀','🌷','🫖','🍰']},
+			{ name: 'a Volcano', walls: ['🌋','🔥','🪨','🌑']}
         ];
 
         const FOODS = [
@@ -234,16 +237,16 @@
             let baseStats;
             switch (type) {
                 case SPRITES.RUNNER:      baseStats = { hp: 15, attack: 6,  defense: 0, vision: 11, speed: 30 }; break;
-                case SPRITES.PERSON:      baseStats = { hp: 30, attack: 3,  defense: 1, vision: 6,  speed: 15 }; break;
-                case SPRITES.CARTWHEELER: baseStats = { hp: 25, attack: 5,  defense: 1, vision: 9,  speed: 25 }; break;
-                case SPRITES.WALKER:      baseStats = { hp: 10, attack: 4,  defense: 0, vision: 7,  speed: 12 }; break;
+                case SPRITES.PERSON:      baseStats = { hp: 30, attack: 4,  defense: 1, vision: 5,  speed: 15 }; break;
+                case SPRITES.CARTWHEELER: baseStats = { hp: 25, attack: 5,  defense: 1, vision: 8,  speed: 25 }; break;
+                case SPRITES.WALKER:      baseStats = { hp: 10, attack: 5,  defense: 0, vision: 7,  speed: 12 }; break;
                 case SPRITES.JUGGLER:     baseStats = { hp: 30, attack: 8,  defense: 2, vision: 9,  speed: 20 }; break;
-                case SPRITES.LIFTER:      baseStats = { hp: 40, attack: 7,  defense: 4, vision: 5,  speed: 10 }; break;
-                case SPRITES.PARTNERS:    baseStats = { hp: 65, attack: 14, defense: 2, vision: 8,  speed: 6  }; break;
+                case SPRITES.LIFTER:      baseStats = { hp: 40, attack: 7,  defense: 4, vision: 4,  speed: 9 }; break;
+                case SPRITES.PARTNERS:    baseStats = { hp: 65, attack: 14, defense: 2, vision: 9,  speed: 8 }; break;
                 case SPRITES.GOLFER:      baseStats = { hp: 35, attack: 10, defense: 2, vision: 7,  speed: 18 }; break;
-                case SPRITES.KNEELER:     baseStats = { hp: 50, attack: 2,  defense: 5, vision: 4,  speed: 8  }; break;
-		case SPRITES.BALLER:	  baseStats = { hp: 10, attack: 9,  defense: 1, vision: 10, speed: 15 }; break;
-		case SPRITES.FENCER:	  baseStats = { hp: 25, attack: 12, defense: 3, vision: 4,  speed: 9  }; break;
+                case SPRITES.KNEELER:     baseStats = { hp: 50, attack: 3,  defense: 5, vision: 4,  speed: 9  }; break;
+				case SPRITES.BALLER:	  baseStats = { hp: 10, attack: 9,  defense: 1, vision: 10, speed: 15 }; break;
+				case SPRITES.FENCER:	  baseStats = { hp: 25, attack: 12, defense: 3, vision: 6,  speed: 10  }; break;
                 case SPRITES.PORTAL:      return { type, x, y };
                 case SPRITES.CHEST:       return { type, x, y };
                 default:                  return { type, x, y };
@@ -805,6 +808,7 @@
     </script>
 </body>
 </html>
+
 
 
 

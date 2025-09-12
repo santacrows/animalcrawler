@@ -535,7 +535,9 @@
                 ? Math.floor(Math.random() * (Math.floor(attackerStats.attack) - Math.floor(attackerStats.attack / 2) + 1)) + Math.floor(attackerStats.attack / 2)
                 : attackerStats.attack;
 
-            const damageReduction = 1 - (100 / (100 + defenderStats.defense));
+            //const damageReduction = 1 - (100 / (100 + defenderStats.defense)); a potential other system
+			const damageReduction = 100 / (100 + (defenderStats.defense * 10));
+
             const damage = Math.max(1, Math.round(preDefenseDamage * damageReduction));
             defender.hp -= damage;
             
@@ -808,6 +810,7 @@
     </script>
 </body>
 </html>
+
 
 
 

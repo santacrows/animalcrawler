@@ -510,20 +510,20 @@
             logMessage("You open a 🎁!", 'yellow');
             const bonusType = Math.random();
             
-            if (bonusType < 0.25) {
-                const atkBonus = Math.floor(Math.random() * 2) + 1;
+            if (bonusType < 0.2) {
+                const atkBonus = Math.floor(Math.random() * 3) + 1;
                 player.baseAttack += atkBonus;
                 logMessage(`Your Attack permanently increased by ${atkBonus}!`, '#66ccff');
-            } else if (bonusType < 0.5) {
-                const defBonus = Math.floor(Math.random() * 2) + 1;
+            } else if (bonusType < 0.4) {
+                const defBonus = Math.floor(Math.random() * 3) + 1;
                 player.baseDefense += defBonus;
                 logMessage(`Your Defense permanently increased by ${defBonus}!`, '#66ccff');
-            } else if (bonusType < 0.7) {
+            } else if (bonusType < 0.6) {
                 const hpBonus = Math.floor(Math.random() * 11) + 10;
                 player.maxHp += hpBonus;
                 player.hp += hpBonus;
                 logMessage(`Your Max HP permanently increased by ${hpBonus}!`, '#d9534f');
-            } else if (bonusType < 0.85) {
+            } else if (bonusType < 0.8) {
                 const spdBonus = Math.floor(Math.random() * 2) + 1;
                 player.speed += spdBonus;
                 logMessage(`Your Speed permanently increased by ${spdBonus}!`, '#a875ff');
@@ -583,6 +583,7 @@
             logMessage(`HP fully restored! Max HP increased by ${hpBonus}.`, '#99ff99');
             player.baseAttack++; logMessage('Your Attack increased!', '#66ccff'); 
             player.baseDefense++; logMessage('Your Defense increased!', '#66ccff'); 
+			player.speed++; logMessage('Your Speed increased!', '#66ccff');
         }
         
         function getStats(actor) {
@@ -847,7 +848,7 @@
             elements.gameUI.classList.add('flex');
             generateDungeon();
             resizeCanvas();
-            logMessage(`You begin your adventure in a ${currentBiome.name}...`, '#aaa');
+            logMessage(`You begin your adventure in ${currentBiome.name}...`, '#aaa');
             processTurns();
         }
 
@@ -862,6 +863,7 @@
     </script>
 </body>
 </html>
+
 
 
 

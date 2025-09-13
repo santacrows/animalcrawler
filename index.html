@@ -50,6 +50,21 @@
             transform: scale(1.05);
             box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
         }
+
+        /* Animation for stat increases */
+        @keyframes stat-flash {
+            0%, 100% {
+                color: #f0f0f0;
+                transform: scale(1);
+            }
+            50% {
+                color: #ffd700;
+                transform: scale(1.25);
+            }
+        }
+        .stat-increase-animation {
+            animation: stat-flash 0.6s ease-in-out;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center h-screen p-2 sm:p-4">
@@ -104,7 +119,7 @@
     <!-- Modals -->
     <div id="characterSelectionModal" class="modal fixed inset-0 flex items-center justify-center z-10 p-2 sm:p-4">
         <div class="text-center p-4 sm:p-6 bg-gray-900 rounded-xl border-4 border-yellow-500 shadow-lg w-full max-w-7xl h-[95vh] flex flex-col overflow-y-auto sm:overflow-y-hidden">
-            <div id="characterGrid" class="grid grid-cols-3 sm:grid-cols-6 sm:grid-rows-3 gap-2 sm:gap-4 sm:flex-grow"></div>
+            <div id="characterGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-4 flex-grow"></div>
         </div>
     </div>
     <div id="gameOverModal" class="modal fixed inset-0 items-center justify-center z-20 opacity-0 pointer-events-none hidden">
@@ -223,12 +238,18 @@
             { id: 1,  name: 'Elephant',  sprite: '🐘', hp: 220, attack: 14, defense: 18, speed: 14 }, 
             { id: 8,  name: 'Buffalo',   sprite: '🐃', hp: 230, attack: 13, defense: 20, speed: 13 }, 
             { id: 11, name: 'Turtle',    sprite: '🐢', hp: 200, attack: 12,  defense: 23, speed: 12 }, 
-            { id: 17, name: 'Sloth',     sprite: '🦥', hp: 250, attack: 14,  defense: 21, speed: 11  }, 
+            { id: 17, name: 'Sloth',     sprite: '🦥', hp: 250, attack: 14,  defense: 21, speed: 11  },
+            { id: 18, name: 'Rhino',     sprite: '🦏', hp: 260, attack: 15, defense: 24, speed: 10 },
+            { id: 19, name: 'Giraffe',   sprite: '🦒', hp: 190, attack: 16, defense: 13, speed: 19 },
+            { id: 20, name: 'Zebra',     sprite: '🦓', hp: 120, attack: 14, defense: 9,  speed: 22 },
+            { id: 21, name: 'Gorilla',   sprite: '🦍', hp: 240, attack: 18, defense: 22, speed: 12 },
+            { id: 22, name: 'Owl',       sprite: '🦉', hp: 110, attack: 18, defense: 10, speed: 23 },
         ];
         let CHARACTERS = JSON.parse(JSON.stringify(ORIGINAL_CHARACTERS));
         
         // --- Game State ---
         let map = [], player = {}, enemies = [], items = [], portal = {}, animations = [], gameOver = false, dungeonZone = 1, currentBiome = {}, turnCount = 0, isPlayerTurn = true;
+        let lastPlayerStats = {};
 
         // --- Game Logic ---
         function createActor(type, x, y) {
@@ -726,19 +747,54 @@
             updateUI();
         }
 
+        function triggerStatAnimation(element) {
+            element.classList.add('stat-increase-animation');
+            setTimeout(() => {
+                element.classList.remove('stat-increase-animation');
+            }, 600);
+        }
+
         function updateUI() {
+            const currentStats = getStats(player);
+
+            // Check for stat increases and trigger animations
+            if (player.level > (lastPlayerStats.level || 0)) {
+                triggerStatAnimation(elements.playerLevel);
+            }
+            if (currentStats.attack > (lastPlayerStats.attack || 0)) {
+                triggerStatAnimation(elements.playerAttack);
+            }
+            if (currentStats.defense > (lastPlayerStats.defense || 0)) {
+                triggerStatAnimation(elements.playerDefense);
+            }
+            if (currentStats.speed > (lastPlayerStats.speed || 0)) {
+                triggerStatAnimation(elements.playerSpeed);
+            }
+             if (player.maxHp > (lastPlayerStats.maxHp || 0)) {
+                triggerStatAnimation(elements.playerHealthText);
+            }
+
             elements.playerHealthBar.style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
             elements.playerHealthText.textContent = `${Math.max(0, player.hp)}/${player.maxHp}`;
             elements.zoneCounter.textContent = `${dungeonZone}`;
             elements.playerSprite.textContent = player.sprite;
             elements.playerClass.textContent = player.name;
-            const currentStats = getStats(player);
+            
             elements.playerAttack.textContent = `${currentStats.attack}`;
             elements.playerDefense.textContent = `${currentStats.defense}`;
             elements.playerSpeed.textContent = `${currentStats.speed}`;
             elements.playerLevel.textContent = player.level;
             elements.playerXpBar.style.width = `${(player.xp / player.xpToNextLevel) * 100}%`;
             elements.playerXpText.textContent = `${player.xp}/${player.xpToNextLevel}`;
+
+            // Store current stats for the next comparison
+            lastPlayerStats = {
+                level: player.level,
+                attack: currentStats.attack,
+                defense: currentStats.defense,
+                speed: currentStats.speed,
+                maxHp: player.maxHp
+            };
         }
 
         function logMessage(message, color = '#f0f0f0') {
@@ -776,6 +832,22 @@
                 card.onclick = () => initGame(char.id);
                 elements.characterGrid.appendChild(card);
             });
+
+            // Add Random Character Card
+            const randomCard = document.createElement('div');
+            randomCard.className = 'character-card bg-gray-800 p-2 rounded-lg cursor-pointer flex flex-col justify-center h-full text-center';
+            randomCard.innerHTML = `
+                <div class="text-2xl sm:text-4xl lg:text-5xl">❓</div>
+                <div class="font-bold text-yellow-400 mt-1 text-[10px] sm:text-sm">Random</div>
+                 <div class="text-gray-400 mt-1 text-[8px] sm:text-xs leading-tight">
+                    &nbsp;<br>&nbsp;
+                </div>
+            `;
+            randomCard.onclick = () => {
+                const randomChar = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+                initGame(randomChar.id);
+            };
+            elements.characterGrid.appendChild(randomCard);
         }
 
         function initMobileControls() {
@@ -838,6 +910,16 @@
                 baseDefense: charData.defense,
                 level: 1, xp: 0, xpToNextLevel: 100, ap: 0
             };
+
+            const startingStats = getStats(player);
+            lastPlayerStats = {
+                level: player.level,
+                attack: startingStats.attack,
+                defense: startingStats.defense,
+                speed: startingStats.speed,
+                maxHp: player.maxHp
+            };
+
             gameOver = false; dungeonZone = 1; turnCount = 0; isPlayerTurn = true;
             animations = [];
             currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
@@ -862,14 +944,4 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
 

@@ -250,6 +250,7 @@
         // --- Game State ---
         let map = [], player = {}, enemies = [], items = [], portal = {}, animations = [], gameOver = false, dungeonZone = 1, currentBiome = {}, turnCount = 0, isPlayerTurn = true;
         let lastPlayerStats = {};
+        let isIntroAnimating = false;
 
         // --- Game Logic ---
         function createActor(type, x, y) {
@@ -577,7 +578,7 @@
                 logMessage(`${defenderName} is defeated!`, '#99ff99');
                 if (defender.type) {
                     defender.hpBarTimer = 0;
-                    animations.push({ x: defender.x, y: defender.y, frames: ['💥', '💥', ' '], currentFrame: 0 });
+                    animations.push({ type: 'death', x: defender.x, y: defender.y, frames: ['💥', '💥', ' '], currentFrame: 0 });
                     const xpGained = Math.floor(defender.maxHp / 4 + defender.attack);
                     addXp(xpGained);
                     enemies = enemies.filter(e => e !== defender);
@@ -643,8 +644,9 @@
             currentBiome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
             logMessage(`You fall through the hole into ${currentBiome.name}...`, '#ffd700');
             generateDungeon();
-            player.ap = 0; isPlayerTurn = true;
-            draw(); processTurns();
+            player.ap = 0; 
+            isPlayerTurn = false; // Prevent input during animation
+            startIntroAnimation();
         }
 
         function loseGame() {
@@ -678,8 +680,11 @@
         
         function updateAnimations() {
             animations = animations.filter(anim => {
-                anim.currentFrame++;
-                return anim.currentFrame < anim.frames.length;
+                if (anim.type === 'death') {
+                    anim.currentFrame++;
+                    return anim.currentFrame < anim.frames.length;
+                }
+                return true; // Keep other animation types
             });
 
             enemies.forEach(e => {
@@ -733,16 +738,37 @@
                     ctx.strokeRect(x, y, barWidth, barHeight);
                 }
             });
+            
+            const fallAnimation = animations.find(a => a.type === 'fall');
 
             // 4. Draw player
-            if (player.sprite) {
+            if (player.sprite && !fallAnimation) {
                 ctx.fillText(player.sprite, player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + TILE_SIZE / 2);
             }
 
             // 5. Draw animations (like death explosions)
             animations.forEach(anim => {
-                const frameSprite = anim.frames[anim.currentFrame];
-                if (frameSprite) ctx.fillText(frameSprite, anim.x * TILE_SIZE + TILE_SIZE / 2, anim.y * TILE_SIZE + TILE_SIZE / 2);
+                if (anim.type === 'fall') {
+                    const t = anim.progress / anim.duration;
+                    const easedT = easeOutBounce(t);
+
+                    const startPixelY = (anim.y - 4) * TILE_SIZE;
+                    const endPixelY = anim.y * TILE_SIZE;
+                    const currentPixelY = startPixelY + (endPixelY - startPixelY) * easedT;
+                    
+                    const rotation = (1 - easedT) * 45; 
+                    ctx.save();
+                    ctx.translate(anim.x * TILE_SIZE + TILE_SIZE / 2, currentPixelY + TILE_SIZE / 2);
+                    ctx.rotate(rotation * Math.PI / 180);
+                    ctx.globalAlpha = Math.min(1, t * 4);
+                    
+                    ctx.fillText(anim.sprite, 0, 0);
+                    
+                    ctx.restore();
+                } else if (anim.type === 'death') {
+                    const frameSprite = anim.frames[anim.currentFrame];
+                    if (frameSprite) ctx.fillText(frameSprite, anim.x * TILE_SIZE + TILE_SIZE / 2, anim.y * TILE_SIZE + TILE_SIZE / 2);
+                }
             });
             updateUI();
         }
@@ -816,6 +842,53 @@
             }
         }
         
+        // --- Helper Functions ---
+        function easeOutBounce(t) {
+            if (t < (1 / 2.75)) {
+                return 7.5625 * t * t;
+            } else if (t < (2 / 2.75)) {
+                return 7.5625 * (t -= (1.5 / 2.75)) * t + 0.75;
+            } else if (t < (2.5 / 2.75)) {
+                return 7.5625 * (t -= (2.25 / 2.75)) * t + 0.9375;
+            } else {
+                return 7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375;
+            }
+        }
+
+        function startIntroAnimation() {
+            isIntroAnimating = true;
+            
+            const fallAnimation = {
+                type: 'fall',
+                sprite: player.sprite,
+                x: player.x,
+                y: player.y,
+                progress: 0,
+                duration: 60 // 1 second at 60fps
+            };
+            animations.push(fallAnimation);
+
+            let startTime = null;
+            function animationLoop(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                
+                fallAnimation.progress = Math.min(fallAnimation.duration, Math.floor(elapsed / (1000 / 60)));
+
+                draw(); 
+
+                if (fallAnimation.progress < fallAnimation.duration) {
+                    requestAnimationFrame(animationLoop);
+                } else {
+                    isIntroAnimating = false;
+                    animations = animations.filter(a => a.type !== 'fall');
+                    isPlayerTurn = true;
+                    draw(); // Redraw to show the player in their final position and wait for input.
+                }
+            }
+            requestAnimationFrame(animationLoop);
+        }
+
         // --- Initialization ---
         function populateCharacterSelection() {
             CHARACTERS.sort((a,b) => a.id - b.id).forEach(char => {
@@ -930,7 +1003,7 @@
             generateDungeon();
             resizeCanvas();
             logMessage(`You begin your adventure in ${currentBiome.name}...`, '#aaa');
-            processTurns();
+            startIntroAnimation();
         }
 
         window.addEventListener('keydown', handleInput);
@@ -944,4 +1017,6 @@
     </script>
 </body>
 </html>
+
+
 

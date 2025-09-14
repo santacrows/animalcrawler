@@ -65,6 +65,9 @@
         .stat-increase-animation {
             animation: stat-flash 0.6s ease-in-out;
         }
+        #touch-controls {
+            position: fixed; /* Use fixed positioning for dragging */
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center h-screen p-2 sm:p-4">
@@ -131,10 +134,10 @@
     </div>
 
     <!-- Touch Controls for Mobile -->
-    <div id="touch-controls" class="fixed bottom-5 right-5 grid grid-cols-3 grid-rows-3 w-36 h-36 opacity-70 lg:hidden">
+    <div id="touch-controls" class="bottom-5 right-5 grid grid-cols-3 grid-rows-3 w-48 h-48 opacity-70 lg:hidden" style="position: fixed;">
         <button id="touch-up" class="col-start-2 row-start-1 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">▲</button>
         <button id="touch-left" class="col-start-1 row-start-2 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">◀</button>
-        <button id="move-controls" class="col-start-2 row-start-2 bg-gray-600 border-2 border-gray-500 rounded-full text-lg active:bg-gray-500">↔</button>
+        <button id="move-controls" class="col-start-2 row-start-2 bg-gray-600 border-2 border-gray-500 rounded-full text-lg active:bg-gray-500 cursor-grab active:cursor-grabbing">✥</button>
         <button id="touch-right" class="col-start-3 row-start-2 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">▶</button>
         <button id="touch-down" class="col-start-2 row-start-3 bg-gray-700 border-2 border-gray-500 rounded-md text-2xl active:bg-gray-500">▼</button>
     </div>
@@ -252,6 +255,8 @@
         let lastPlayerStats = {};
         let isIntroAnimating = false;
         let mapCanvas; // Off-screen canvas for rendering the static map background
+        let inputCooldown = 0;
+        const INPUT_COOLDOWN_FRAMES = 5; // A 5-frame cooldown for held-key movement
 
         // --- Game Logic ---
         function createActor(type, x, y) {
@@ -493,52 +498,59 @@
                 player.ap -= ACTION_COST;
                 turnCount++;
                 isPlayerTurn = false;
-                requestAnimationFrame(gameLoop);
             }
         }
         
-        function gameLoop() {
-            if (gameOver || isPlayerTurn) {
-                return; // Stop the loop if the game is over or it's the player's turn to act
+        function mainTick() {
+            // This is our new main loop, running on every animation frame.
+            requestAnimationFrame(mainTick);
+
+            // Don't run game logic if modals are up, game is over, or intro is playing
+            if (elements.gameUI.classList.contains('hidden') || gameOver || isIntroAnimating) {
+                return;
             }
 
-            // 1. Add AP for one tick
-            player.ap += player.speed;
-            enemies.forEach(e => {
-                if (e.hp > 0) e.ap += e.speed;
-            });
+            // Decrement the input cooldown timer each frame
+            if (inputCooldown > 0) {
+                inputCooldown--;
+            }
 
-            // 2. Process all ready enemies
-            let readyEnemies = enemies.filter(e => e.ap >= ACTION_COST && e.hp > 0);
-            if (readyEnemies.length > 0) {
-                readyEnemies.sort((a, b) => b.ap - a.ap); // Highest AP enemy goes first.
+            if (isPlayerTurn) {
+                // It's the player's turn. Check for input and act.
+                processPlayerInput();
+            } 
+            
+            if (!isPlayerTurn) {
+                // It's the AI's turn.
+                // This loop runs as many "ticks" as needed in a single frame
+                // until the player can act again. This makes AI turns feel instant.
+                while (!isPlayerTurn && !gameOver) {
+                    player.ap += player.speed;
+                    enemies.forEach(e => {
+                        if (e.hp > 0) e.ap += e.speed;
+                    });
 
-                for (const enemy of readyEnemies) {
-                    if (enemy.hp > 0 && enemy.ap >= ACTION_COST) {
-                        runEnemyAI(enemy);
-                        enemy.ap -= ACTION_COST;
-                        if (gameOver) {
-                            updateAnimations();
-                            draw();
-                            return; // Stop immediately if an enemy action ends the game
+                    let readyEnemies = enemies.filter(e => e.ap >= ACTION_COST && e.hp > 0);
+                    if (readyEnemies.length > 0) {
+                        readyEnemies.sort((a, b) => b.ap - a.ap);
+                        for (const enemy of readyEnemies) {
+                            if (enemy.hp > 0 && enemy.ap >= ACTION_COST) {
+                                runEnemyAI(enemy);
+                                enemy.ap -= ACTION_COST;
+                                if (gameOver) break;
+                            }
                         }
+                    }
+
+                    if (player.ap >= ACTION_COST) {
+                        isPlayerTurn = true;
                     }
                 }
             }
 
-            // 3. Check if it's now the player's turn
-            if (player.ap >= ACTION_COST) {
-                isPlayerTurn = true;
-            }
-
-            // 4. Redraw the screen and schedule the next frame
+            // Always update animations and redraw the screen after the logic for the frame is done.
             updateAnimations();
             draw();
-
-            // If it's still not the player's turn, continue the loop
-            if (!isPlayerTurn) {
-                requestAnimationFrame(gameLoop);
-            }
         }
 
         function openChest() {
@@ -853,17 +865,41 @@
             elements.messageLog.scrollTop = elements.messageLog.scrollHeight;
         }
 
-        function handleInput(e) {
-            if (elements.gameUI.classList.contains('hidden')) return;
-            if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); return; }
-            if (e.key.startsWith('Arrow')) {
+        const keysDown = {};
+
+        function handleKeyDown(e) {
+            if (elements.gameUI.classList.contains('hidden') || gameOver || isIntroAnimating) return;
+            const key = e.key.toLowerCase();
+            if (key.startsWith('arrow') || ['w', 'a', 's', 'd'].includes(key)) {
                 e.preventDefault();
-                switch (e.key) {
-                    case 'ArrowUp': movePlayer(0, -1); break;
-                    case 'ArrowDown': movePlayer(0, 1); break;
-                    case 'ArrowLeft': movePlayer(-1, 0); break;
-                    case 'ArrowRight': movePlayer(1, 0); break;
-                }
+                keysDown[key] = true;
+            }
+        }
+
+        function handleKeyUp(e) {
+            const key = e.key.toLowerCase();
+            delete keysDown[key];
+        }
+
+        function processPlayerInput() {
+            if (!isPlayerTurn || gameOver || isIntroAnimating || inputCooldown > 0) return;
+
+            let dx = 0;
+            let dy = 0;
+
+            if (keysDown['arrowup'] || keysDown['w']) {
+                dy = -1;
+            } else if (keysDown['arrowdown'] || keysDown['s']) {
+                dy = 1;
+            } else if (keysDown['arrowleft'] || keysDown['a']) {
+                dx = -1;
+            } else if (keysDown['arrowright'] || keysDown['d']) {
+                dx = 1;
+            }
+
+            if (dx !== 0 || dy !== 0) {
+                movePlayer(dx, dy);
+                inputCooldown = INPUT_COOLDOWN_FRAMES; // Set the cooldown after a move is made
             }
         }
         
@@ -907,13 +943,10 @@
                 } else {
                     isIntroAnimating = false;
                     animations = animations.filter(a => a.type !== 'fall');
-                    draw(); // Redraw to show the player in their final position
-                    if (player.ap < ACTION_COST) {
-                        isPlayerTurn = false;
-                        requestAnimationFrame(gameLoop);
-                    } else {
-                        isPlayerTurn = true;
-                    }
+                    // Give the player the first turn on the new level
+                    player.ap = ACTION_COST;
+                    isPlayerTurn = true;
+                    draw(); // Redraw to show the player in their final position and wait for input
                 }
             }
             requestAnimationFrame(animationLoop);
@@ -962,16 +995,83 @@
             const touchControls = document.getElementById('touch-controls');
             const moveControlsButton = document.getElementById('move-controls');
 
-            moveControlsButton.addEventListener('click', () => {
-                if (touchControls.classList.contains('right-5')) {
-                    touchControls.classList.remove('right-5');
-                    touchControls.classList.add('left-5');
-                } else {
-                    touchControls.classList.remove('left-5');
-                    touchControls.classList.add('right-5');
+            // --- New Drag Logic ---
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            const startDrag = (clientX, clientY) => {
+                isDragging = true;
+                // remove positioning classes to use top/left
+                touchControls.classList.remove('bottom-5', 'right-5', 'left-5'); 
+                
+                // Calculate offset from top-left corner of the element
+                const rect = touchControls.getBoundingClientRect();
+                offsetX = clientX - rect.left;
+                offsetY = clientY - rect.top;
+
+                // Set initial position if it's not set
+                if (!touchControls.style.left) {
+                    touchControls.style.left = `${rect.left}px`;
+                }
+                if (!touchControls.style.top) {
+                    touchControls.style.top = `${rect.top}px`;
+                }
+
+                document.body.style.userSelect = 'none'; // Prevent text selection while dragging
+            };
+
+            const drag = (clientX, clientY) => {
+                if (!isDragging) return;
+                
+                let newLeft = clientX - offsetX;
+                let newTop = clientY - offsetY;
+
+                // Constrain to viewport
+                const rect = touchControls.getBoundingClientRect();
+                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - rect.width));
+                newTop = Math.max(0, Math.min(newTop, window.innerHeight - rect.height));
+
+                touchControls.style.left = `${newLeft}px`;
+                touchControls.style.top = `${newTop}px`;
+            };
+
+            const stopDrag = () => {
+                if(isDragging) {
+                    isDragging = false;
+                    document.body.style.userSelect = '';
+                }
+            };
+
+            // Touch events
+            moveControlsButton.addEventListener('touchstart', e => {
+                e.preventDefault(); // Prevent click event and potential scrolling
+                startDrag(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: false });
+            
+            window.addEventListener('touchmove', e => {
+                if (isDragging) {
+                    drag(e.touches[0].clientX, e.touches[0].clientY);
                 }
             });
 
+            window.addEventListener('touchend', stopDrag);
+
+            // Mouse events for desktop/testing
+            moveControlsButton.addEventListener('mousedown', e => {
+                e.preventDefault();
+                startDrag(e.clientX, e.clientY);
+            });
+
+            window.addEventListener('mousemove', e => {
+                if(isDragging) {
+                    drag(e.clientX, e.clientY);
+                }
+            });
+
+            window.addEventListener('mouseup', stopDrag);
+            // --- End New Drag Logic ---
+
+            // --- Swipe on Canvas Logic (Keep this) ---
             let touchStartX = 0, touchStartY = 0;
             elements.canvas.addEventListener('touchstart', e => {
                 touchStartX = e.changedTouches[0].screenX;
@@ -1036,10 +1136,12 @@
             startIntroAnimation();
         }
 
-        window.addEventListener('keydown', handleInput);
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
         window.onload = () => {
              populateCharacterSelection();
              initMobileControls();
+             mainTick(); // Start the new, responsive game loop
              window.addEventListener('resize', () => {
                 resizeCanvas();
              });
@@ -1047,4 +1149,5 @@
     </script>
 </body>
 </html>
+
 

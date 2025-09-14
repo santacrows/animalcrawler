@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Press Start 2P', monospace;
             background-color: #1a1a1a;
             color: #f0f0f0;
             overflow: hidden;
@@ -69,7 +69,9 @@
 </head>
 <body class="flex flex-col items-center justify-center h-screen p-2 sm:p-4">
 
+    <!-- Game UI (Initially Hidden) -->
     <div id="game-ui" class="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-stretch gap-4 hidden h-full">
+        <!-- Left Column: Canvas + Status -->
         <div class="flex flex-col gap-2 flex-grow h-3/5 lg:h-full">
             <div class="game-container flex justify-center items-center flex-grow">
                 <canvas id="gameCanvas"></canvas>
@@ -88,6 +90,7 @@
             </div>
         </div>
         
+        <!-- Right Column: UI -->
         <div class="flex flex-col gap-2 lg:w-80 xl:w-96 flex-shrink-0 h-2/5 lg:h-full">
             <div class="flex gap-2 w-full">
                  <div class="info-bar p-2 rounded-lg text-center w-1/3">
@@ -113,6 +116,7 @@
         </div>
     </div>
 
+    <!-- Modals -->
     <div id="characterSelectionModal" class="modal fixed inset-0 flex items-center justify-center z-10 p-2 sm:p-4">
         <div class="text-center p-4 sm:p-6 bg-gray-900 rounded-xl border-4 border-yellow-500 shadow-lg w-full max-w-7xl h-[95vh] flex flex-col overflow-y-auto sm:overflow-y-hidden">
             <div id="characterGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-4 flex-grow"></div>
@@ -194,7 +198,7 @@
             { name: 'an Arcade', walls: ['👾', '🕹️', '🪩', '🤖','🎮','🎆','🌃'] },
             { name: 'the Crystal Caverns', walls: ['💎', '💠', '🔮', '✨'] },
             { name: 'a Shipwreck', walls: ['🏝️','⛵', '🏴‍☠️', '⚓','🗺️'] },
-            { name: 'an Office', walls: ['𗄄️','🖥️', '💻', '⌨️', '📠', '🖨️', '💾', '🖱️', '📎','🗑️',] },
+            { name: 'an Office', walls: ['🗄️','🖥️', '💻', '⌨️', '📠', '🖨️', '💾', '🖱️', '📎','🗑️',] },
 			{ name: 'the Circus', walls: ['🎪', '🤡', '🎠', '🎡', '🎈', '🥜'] }	
         ];
 
@@ -239,8 +243,13 @@
         let lastPlayerStats = {};
         let isIntroAnimating = false;
         let mapCanvas; // Off-screen canvas for rendering the static map background
-        let inputCooldown = 0;
-        const INPUT_COOLDOWN_FRAMES = 8; // A 8-frame cooldown for held-key movement
+        
+        // --- Input State ---
+        const keysDown = {};
+        let keyHeldTime = {};
+        const INITIAL_DELAY = 10; // Frames to wait after initial press before repeating
+        const REPEAT_DELAY = 3;   // Frames to wait between each repeat action (faster)
+
 
         // --- Game Logic ---
         function createActor(type, x, y) {
@@ -486,21 +495,20 @@
         }
         
         function mainTick() {
-            // This is our new main loop, running on every animation frame.
             requestAnimationFrame(mainTick);
 
-            // Don't run game logic if modals are up, game is over, or intro is playing
             if (elements.gameUI.classList.contains('hidden') || gameOver || isIntroAnimating) {
                 return;
             }
 
-            // Decrement the input cooldown timer each frame
-            if (inputCooldown > 0) {
-                inputCooldown--;
+            // Increment timers for all held keys, every frame
+            for (const key in keysDown) {
+                if (keyHeldTime[key] !== undefined) {
+                    keyHeldTime[key]++;
+                }
             }
 
             if (isPlayerTurn) {
-                // It's the player's turn. Check for input and act.
                 processPlayerInput();
             } 
             
@@ -840,7 +848,6 @@
             };
         }
 
-        // OPTIMIZATION: Use appendChild for better performance than innerHTML +=
         function logMessage(message, color = '#f0f0f0') {
             const p = document.createElement('p');
             p.textContent = `> ${message}`;
@@ -849,41 +856,59 @@
             elements.messageLog.scrollTop = elements.messageLog.scrollHeight;
         }
 
-        const keysDown = {};
-
         function handleKeyDown(e) {
             if (elements.gameUI.classList.contains('hidden') || gameOver || isIntroAnimating) return;
             const key = e.key.toLowerCase();
             if (key.startsWith('arrow') || ['w', 'a', 's', 'd'].includes(key)) {
                 e.preventDefault();
-                keysDown[key] = true;
+                if (!keysDown[key]) { // Only on initial press
+                    keysDown[key] = true;
+                    keyHeldTime[key] = -1; // Set to -1 so the first tick increments it to 0 for an instant move
+                }
             }
         }
 
         function handleKeyUp(e) {
             const key = e.key.toLowerCase();
             delete keysDown[key];
+            delete keyHeldTime[key];
         }
 
         function processPlayerInput() {
-            if (!isPlayerTurn || gameOver || isIntroAnimating || inputCooldown > 0) return;
+            if (!isPlayerTurn || gameOver || isIntroAnimating) return;
 
             let dx = 0;
             let dy = 0;
+            let keyToProcess = null;
 
-            if (keysDown['arrowup'] || keysDown['w']) {
-                dy = -1;
-            } else if (keysDown['arrowdown'] || keysDown['s']) {
-                dy = 1;
-            } else if (keysDown['arrowleft'] || keysDown['a']) {
-                dx = -1;
-            } else if (keysDown['arrowright'] || keysDown['d']) {
-                dx = 1;
+            const keyPriority = ['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd'];
+            for (const key of keyPriority) {
+                if (keysDown[key]) {
+                    const heldTime = keyHeldTime[key];
+                    const isInitialPress = (heldTime === 0);
+                    const isRepeating = (heldTime > INITIAL_DELAY) && ((heldTime - INITIAL_DELAY) % REPEAT_DELAY === 0);
+
+                    if (isInitialPress || isRepeating) {
+                        keyToProcess = key;
+                        break;
+                    }
+                }
             }
 
-            if (dx !== 0 || dy !== 0) {
-                movePlayer(dx, dy);
-                inputCooldown = INPUT_COOLDOWN_FRAMES; // Set the cooldown after a move is made
+            if (keyToProcess) {
+                if (keyToProcess === 'arrowup' || keyToProcess === 'w') {
+                    dy = -1;
+                } else if (keyToProcess === 'arrowdown' || keyToProcess === 's') {
+                    dy = 1;
+                } else if (keyToProcess === 'arrowleft' || keyToProcess === 'a') {
+                    dx = -1;
+                } else if (keyToProcess === 'arrowright' || keyToProcess === 'd') {
+                    dx = 1;
+                }
+
+                if (dx !== 0 || dy !== 0) {
+                    movePlayer(dx, dy);
+                }
             }
         }
         
@@ -927,10 +952,9 @@
                 } else {
                     isIntroAnimating = false;
                     animations = animations.filter(a => a.type !== 'fall');
-                    // Give the player the first turn on the new level
                     player.ap = ACTION_COST;
                     isPlayerTurn = true;
-                    draw(); // Redraw to show the player in their final position and wait for input
+                    draw();
                 }
             }
             requestAnimationFrame(animationLoop);
@@ -953,7 +977,6 @@
                 elements.characterGrid.appendChild(card);
             });
 
-            // Add Random Character Card
             const randomCard = document.createElement('div');
             randomCard.className = 'character-card bg-gray-800 p-2 rounded-lg cursor-pointer flex flex-col justify-center h-full text-center';
             randomCard.innerHTML = `
@@ -1021,7 +1044,7 @@
         window.addEventListener('keyup', handleKeyUp);
         window.onload = () => {
              populateCharacterSelection();
-             mainTick(); // Start the new, responsive game loop
+             mainTick();
              window.addEventListener('resize', () => {
                 resizeCanvas();
              });
@@ -1029,3 +1052,4 @@
     </script>
 </body>
 </html>
+

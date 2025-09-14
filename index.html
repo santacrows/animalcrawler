@@ -257,7 +257,7 @@
         function createActor(type, x, y) {
             const powerLevel = Math.max(0, dungeonLevel - 1);
             const zoneHPMultiplier = Math.pow(1.1, powerLevel);
-			const zoneAttackMultiplier = Math.pow(1.12, powerLevel);
+			const zoneAttackMultiplier = Math.pow(1.09, powerLevel);
 			const zoneDefenseMultiplier = Math.pow(1.08, powerLevel);
 			const zoneSpeedMultiplier = Math.pow(1.01, powerLevel);
 
@@ -490,43 +490,57 @@
 
             if (actionTaken) {
                 if (player.x === portal.x && player.y === portal.y) { initNextLevel(); return; }
+                player.ap -= ACTION_COST;
                 turnCount++;
                 isPlayerTurn = false;
-                processTurns();
+                requestAnimationFrame(gameLoop);
             }
         }
         
-        function processTurns() {
-            while (true) {
-                if(gameOver) return;
-                let actorReady = false;
-                while (!actorReady) {
-                    player.ap += player.speed;
-                    enemies.forEach(e => { if (e.hp > 0) e.ap += e.speed; });
-                    if (player.ap >= ACTION_COST || enemies.some(e => e.ap >= ACTION_COST)) actorReady = true;
-                }
+        function gameLoop() {
+            if (gameOver || isPlayerTurn) {
+                return; // Stop the loop if the game is over or it's the player's turn to act
+            }
 
-                const readyActors = [player, ...enemies].filter(a => a.ap >= ACTION_COST && a.hp > 0);
-                if (readyActors.length === 0) continue;
+            // 1. Add AP for one tick
+            player.ap += player.speed;
+            enemies.forEach(e => {
+                if (e.hp > 0) e.ap += e.speed;
+            });
 
-                readyActors.sort((a, b) => b.ap - a.ap); 
-                const nextActor = readyActors[0];
+            // 2. Process all ready enemies
+            let readyEnemies = enemies.filter(e => e.ap >= ACTION_COST && e.hp > 0);
+            if (readyEnemies.length > 0) {
+                readyEnemies.sort((a, b) => b.ap - a.ap); // Highest AP enemy goes first.
 
-                if (nextActor === player) {
-                    player.ap -= ACTION_COST;
-                    isPlayerTurn = true;
-                    updateAnimations();
-                    draw();
-                    return; 
-                } else {
-                    const enemy = nextActor;
-                    runEnemyAI(enemy);
-                    enemy.ap -= ACTION_COST;
-                    if (gameOver) { updateAnimations(); draw(); return; }
+                for (const enemy of readyEnemies) {
+                    if (enemy.hp > 0 && enemy.ap >= ACTION_COST) {
+                        runEnemyAI(enemy);
+                        enemy.ap -= ACTION_COST;
+                        if (gameOver) {
+                            updateAnimations();
+                            draw();
+                            return; // Stop immediately if an enemy action ends the game
+                        }
+                    }
                 }
             }
+
+            // 3. Check if it's now the player's turn
+            if (player.ap >= ACTION_COST) {
+                isPlayerTurn = true;
+            }
+
+            // 4. Redraw the screen and schedule the next frame
+            updateAnimations();
+            draw();
+
+            // If it's still not the player's turn, continue the loop
+            if (!isPlayerTurn) {
+                requestAnimationFrame(gameLoop);
+            }
         }
-        
+
         function openChest() {
             logMessage("You open a 🎁!", 'yellow');
             const bonusType = Math.random();
@@ -563,7 +577,7 @@
                 ? Math.floor(Math.random() * (Math.floor(attackerStats.attack) - Math.floor(attackerStats.attack / 2) + 1)) + Math.floor(attackerStats.attack / 2)
                 : attackerStats.attack;
 
-			const damageReduction = 100 / (100 + (defenderStats.defense * 9));
+			const damageReduction = 100 / (100 + (defenderStats.defense * 10));
 
             const damage = Math.max(1, Math.round(preDefenseDamage * damageReduction));
             defender.hp -= damage;
@@ -578,7 +592,7 @@
                 logMessage(`${defenderName} is defeated!`, '#99ff99');
                 if (defender.type) {
                     defender.hpBarTimer = 0;
-                    animations.push({ type: 'death', x: defender.x, y: defender.y, frames: ['💥', '💥', ' '], currentFrame: 0 });
+                    animations.push({ type: 'death', x: defender.x, y: defender.y, frames: ['💥', '💥', '💥', '💥', ' '], currentFrame: 0 });
                     const xpGained = Math.floor(defender.maxHp / 4 + defender.attack);
                     addXp(xpGained);
                     enemies = enemies.filter(e => e !== defender);
@@ -893,8 +907,13 @@
                 } else {
                     isIntroAnimating = false;
                     animations = animations.filter(a => a.type !== 'fall');
-                    isPlayerTurn = true;
-                    draw();
+                    draw(); // Redraw to show the player in their final position
+                    if (player.ap < ACTION_COST) {
+                        isPlayerTurn = false;
+                        requestAnimationFrame(gameLoop);
+                    } else {
+                        isPlayerTurn = true;
+                    }
                 }
             }
             requestAnimationFrame(animationLoop);
@@ -992,7 +1011,7 @@
                 maxHp: charData.hp,
                 baseAttack: charData.attack,
                 baseDefense: charData.defense,
-                rank: 1, xp: 0, xpToNextLevel: 100, ap: 0
+                rank: 1, xp: 0, xpToNextLevel: 100, ap: ACTION_COST
             };
 
             const startingStats = getStats(player);
@@ -1028,3 +1047,4 @@
     </script>
 </body>
 </html>
+

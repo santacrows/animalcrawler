@@ -214,14 +214,7 @@
         const COMMON_ENEMIES = [
             SPRITES.RUNNER, SPRITES.PERSON, SPRITES.CARTWHEELER, SPRITES.WALKER, 
             SPRITES.JUGGLER, SPRITES.LIFTER, SPRITES.PARTNERS, SPRITES.GOLFER, 
-		    SPRITES.KNEELER, SPRITES.BALLER, SPRITES.FENCER, SPRITES.HBALLER,
-            // New common enemies added
-            SPRITES.PERSON_WITH_CANE, SPRITES.PERSON_IN_MOTOR_CHAIR, SPRITES.DANCING_MAN,
-            SPRITES.LEVITATING_MAN, SPRITES.BUNNY_EARS_PEOPLE, SPRITES.CLIMBER,
-            SPRITES.SKIER, SPRITES.SNOWBOARDER, SPRITES.SURFER, SPRITES.ROWER,
-            SPRITES.SWIMMER, SPRITES.WRESTLERS, SPRITES.WATER_POLO_PLAYER,
-            SPRITES.LOTUS_POSITION, SPRITES.FAIRY, SPRITES.MERMAID, SPRITES.GENIE,
-            SPRITES.TROLL, SPRITES.OGRE
+		    SPRITES.KNEELER, SPRITES.BALLER, SPRITES.FENCER, SPRITES.HBALLER
         ];
 
         const BIOMES = [
@@ -319,7 +312,7 @@
 				case SPRITES.FENCER:	  baseStats = { hp: 25, attack: 12, defense: 3, vision: 5,  speed: 10  }; break;
                 
                 // New Enemies
-                case SPRITES.PERSON_WITH_CHAIN:     baseStats = { hp: 55, attack: 8,  defense: 4, vision: 5,  speed: 5 }; break;
+                case SPRITES.PERSON_WITH_CANE:     baseStats = { hp: 55, attack: 8,  defense: 4, vision: 5,  speed: 5 }; break;
                 case SPRITES.PERSON_IN_MOTOR_CHAIR: baseStats = { hp: 45, attack: 7,  defense: 6, vision: 7,  speed: 18 }; break;
                 case SPRITES.DANCING_MAN:           baseStats = { hp: 20, attack: 6,  defense: 1, vision: 8,  speed: 28 }; break;
                 case SPRITES.LEVITATING_MAN:        baseStats = { hp: 30, attack: 9,  defense: 2, vision: 10, speed: 17 }; break;
